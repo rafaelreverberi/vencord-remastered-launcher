@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Vencord Remastered Launcher</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<aside><div class="brand"><span class="mark">VR</span><div>Vencord<span>Remastered</span></div></div><p class="caption">LAUNCHER</p>
+<nav aria-label="Main navigation"><button data-page="overview" class="selected">Overview</button><button data-page="plugins">Third Party Plugins <span id="count">0</span></button><button data-page="settings">Settings</button></nav>
+<div class="sidebar-bottom">Community fork<br><span>Powered by Vencord</span><small id="launcher-version"></small></div></aside>
+<main><header><span id="breadcrumb">INSTALLATION / OVERVIEW</span><button id="check" class="subtle">Check for Updates</button></header>
+<section id="overview" class="page"><p class="eyebrow">YOUR DISCORD, YOUR PLUGINS</p><h1>Vencord Remastered</h1><p class="lead">Manage your installation and keep your plugins through every update.</p>
+<div class="installation"><div class="status-dot"></div><div><h2 id="install-status">Detecting Discord…</h2><p id="install-detail">Checking local installations</p></div></div>
+<label class="field-label" for="target">Discord installation</label><select id="target"></select>
+<div class="actions"><button id="apply" class="primary">Patch / Install</button><button id="update">Update Remastered</button><button id="repair">Repair</button></div>
+<dl class="diagnostics"><div><dt>Installed Remastered</dt><dd id="installed">Not installed</dd></div><div><dt>Latest Remastered</dt><dd id="latest">Not checked</dd></div><div><dt>Vencord upstream</dt><dd id="upstream">—</dd></div><div><dt>Third-party plugins</dt><dd id="plugin-summary">0 installed</dd></div><div><dt>Build date</dt><dd id="build-date">—</dd></div></dl>
+<div class="recovery"><div><h3>Recover an incompatible installation</h3><p>Build without third-party plugins. Your stored plugins and settings stay available.</p></div><button id="safe">Build in Safe Mode</button></div>
+</section>
+<section id="plugins" class="page" hidden><div class="page-heading"><div><p class="eyebrow">YOUR COLLECTION</p><h1>Third Party Plugins</h1></div><button id="add" class="primary">Add Third Party Plugin</button></div>
+<p class="lead">Stored independently. Compiled into your Vencord installation.</p>
+<div class="plugin-toolbar"><span id="pending">No pending changes</span><div><button id="update-all">Update All</button><button id="apply-plugins">Apply Changes</button></div></div>
+<div id="plugin-list"></div><div id="empty" class="empty"><span>＋</span><h2>Your plugins live here</h2><p>Add a Git repository or copy a local plugin folder.<br>New plugins start disabled.</p><button id="empty-add">Add Third Party Plugin</button></div>
+<p class="trust-note">Third-party plugins are not reviewed by Vencord Remastered. Only install plugins from sources you trust.</p></section>
+<section id="settings" class="page" hidden><p class="eyebrow">PREFERENCES & RECOVERY</p><h1>Settings</h1><p class="lead">Your data stays on this computer.</p>
+<div class="setting-row"><div><h3>Launcher storage</h3><p id="data-path"></p></div><button id="open-data">Open Folder</button></div>
+<div class="setting-row"><div><h3>Vencord settings</h3><p id="settings-path"></p><small>Choose the data folder containing settings/ for an existing custom installation.</small></div><button id="settings-folder">Choose Folder</button></div>
+<div class="setting-row"><div><h3>Recreate source workspace</h3><p>Preserve the old checkout for recovery and clone a fresh copy.<br>Your stored plugins and Vencord settings stay intact.</p></div><button id="recreate">Recreate Source</button></div>
+<div class="setting-row"><div><h3>Launcher updates</h3><p id="launcher-update-status">Not checked</p></div><div class="vertical-actions"><button id="launcher-check">Check Launcher Update</button><button id="launcher-download">Download Update</button><button id="launcher-install">Install & Restart</button></div></div>
+<p class="trust-note">Vencord Remastered is an unofficial community fork. Not affiliated with Vencord or Discord. GPL-3.0-or-later; original Vencord credits retained.</p></section>
+<section id="operation" aria-live="polite"><div class="operation-heading"><span id="operation-label">Ready</span><button id="toggle-log" class="subtle">View Log</button></div><progress id="progress" hidden></progress><pre id="log" hidden></pre><div id="error" role="alert" hidden></div></section>
+</main>
+<dialog id="add-dialog"><form id="add-form"><button type="button" id="close-dialog" class="close" aria-label="Close">×</button><p class="eyebrow">BUILD YOUR COLLECTION</p><h2>Add Third Party Plugin</h2><p class="trust-note">Third-party plugins are not reviewed by Vencord Remastered. Only install plugins from sources you trust.</p><label for="repo-url">Git repository URL</label><input id="repo-url" type="url" placeholder="https://github.com/author/plugin"><label for="repo-branch">Branch <span class="muted">(optional)</span></label><input id="repo-branch" placeholder="Repository default"><button type="submit" class="primary">Install from Git</button><div class="or">or import a copy</div><button type="button" id="add-local">Choose Local Folder</button><p class="muted">Choose a folder containing one Vencord plugin entrypoint.</p></form></dialog>
+<script src="app.js"></script></body></html>

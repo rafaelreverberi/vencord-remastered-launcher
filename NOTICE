@@ -1,0 +1,10 @@
+Vencord Remastered Launcher is an unofficial community project, not affiliated
+with Vencord or Discord. Vencord Copyright Vendicated and contributors.
+The ASAR format and Discord discovery rules in app/core/discord.cjs are adapted
+from Vencord Installer (GPL-3.0), Copyright 2023 Vendicated and Vencord contributors.
+Audited source: https://github.com/Vendicated/VencordInstaller
+Revision: fe6e041a550b01d1853db6c8ea157d42c7480510
+Electron includes Node.js (MIT); dugite/Git and other dependency licenses are
+included by electron-builder in each distribution. Source and modifications:
+https://github.com/rafaelreverberi/vencord-remastered-launcher
+https://github.com/rafaelreverberi/vencord-remastered
