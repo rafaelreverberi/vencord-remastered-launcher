@@ -5,9 +5,13 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
+concurrency:
+  group: launcher-release-${{ github.ref_name }}
+  cancel-in-progress: false
 jobs:
   package:
     strategy:
+      fail-fast: false
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
@@ -20,7 +24,33 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npm test
-      - name: Package and upload draft release
-        run: npm run package -- --publish always
+      - name: Build complete installers without publishing
+        run: npm run package -- --publish never
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-${{ matrix.os }}
+          path: |
+            release/*.dmg
+            release/*.zip
+            release/*.exe
+            release/*.AppImage
+            release/*.deb
+            release/*.yml
+            release/*.blockmap
+  publish:
+    needs: package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: release-*
+          path: release
+          merge-multiple: true
+      - name: Upload through one publishing job
+        run: node scripts/publish-release.cjs
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
