@@ -6,7 +6,7 @@ on:
 permissions:
   contents: write
 concurrency:
-  group: launcher-release-${{ github.ref_name }}
+  group: launcher-release
   cancel-in-progress: false
 jobs:
   package:

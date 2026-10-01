@@ -26,6 +26,9 @@
 - Public macOS ZIP download passed its GitHub SHA256 check. The packaged launcher
   successfully queried GitHub's release API and validated the published update
   metadata, displaying **Up to date**. This verifies discovery, not update installation.
+- The downloaded 0.1.3 Apple Silicon app was copied into the user Applications
+  folder, opened through LaunchServices, retained the existing installation state
+  and successfully repatched real Discord using the validated build cache.
 - Closing the launcher exits its process; no daemon, login item or tray service is
   installed. No periodic update polling is used.
 
