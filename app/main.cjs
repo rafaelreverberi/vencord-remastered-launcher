@@ -5,6 +5,7 @@ const path = require('node:path');
 const { Manager, parseLink } = require('./core/manager.cjs');
 const { json, writeJson } = require('./core/files.cjs');
 const { autoUpdater } = require('electron-updater');
+const { latestRelease } = require('./core/launcher-release.cjs');
 app.setName('Vencord Remastered');
 protocol.registerSchemesAsPrivileged([{ scheme: 'remastered-app', privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
 let quitAfterOperation = false;
@@ -58,7 +59,7 @@ async function start() {
                 if (!p) throw new Error('Plugin not found');
                 return p.url ? shell.openExternal(p.url) : shell.openPath(path.join(root, p.storage));
             }
-            if (action === 'launcherCheck') { if (!app.isPackaged) throw new Error('Launcher self-update is available in packaged releases'); await autoUpdater.checkForUpdates(); return updateState; }
+            if (action === 'launcherCheck') { if (!app.isPackaged) throw new Error('Launcher self-update is available in packaged releases'); await checkLauncherUpdate(); return updateState; }
             if (action === 'launcherDownload') { if (!app.isPackaged) throw new Error('Use a packaged release'); await autoUpdater.downloadUpdate(); return updateState; }
             if (action === 'launcherInstall') { if (manager.busy || updateState.status !== 'Ready to install') throw new Error('Update is not ready'); autoUpdater.quitAndInstall(); return; }
             return await manager.exclusive(async () => {
@@ -111,7 +112,7 @@ async function start() {
         } finally { if (quitAfterOperation && !manager.busy) app.quit(); }
     });
     autoUpdater.autoDownload = false; autoUpdater.autoInstallOnAppQuit = false;
-    autoUpdater.on('error', e => { updateState = { status: 'Check failed', error: e.message }; log(`Launcher update: ${e.message}\n`); });
+    autoUpdater.on('error', () => { const message = 'Launcher update failed. Use Open Latest Release or try again later.'; updateState = { status: 'Check failed', error: message }; log(`${message}\n`); });
     autoUpdater.on('update-available', info => { updateState = { status: 'Update available', version: info.version }; log(`Launcher ${info.version} available\n`); win.webContents.send('remastered:route', 'refresh'); });
     autoUpdater.on('update-not-available', () => { updateState = { status: 'Up to date' }; win.webContents.send('remastered:route', 'refresh'); });
     autoUpdater.on('download-progress', info => { log(`Launcher update download ${Math.round(info.percent)}%\n`); });
@@ -123,5 +124,19 @@ async function start() {
     if (routeUpdate) openUpdate();
     // One check on open; no timers, tray, login item or background agent.
     checked.then(() => { if (!win.isDestroyed()) win.webContents.send('remastered:route', 'refresh'); }).finally(() => { if (quitAfterOperation) app.quit(); });
-    if (app.isPackaged) autoUpdater.checkForUpdates().catch(() => {});
+    if (app.isPackaged) checkLauncherUpdate().catch(() => {});
+}
+
+async function checkLauncherUpdate() {
+    try {
+        const release = await latestRelease(net.fetch);
+        autoUpdater.setFeedURL({ provider: 'generic', url: release.url });
+        return await autoUpdater.checkForUpdates();
+    } catch (e) {
+        const message = 'Launcher update check failed. Use Open Latest Release or try again later.';
+        updateState = { status: 'Check failed', error: message };
+        log(`${message}\n`);
+        if (win && !win.isDestroyed()) win.webContents.send('remastered:route', 'refresh');
+        throw new Error(message);
+    }
 }
