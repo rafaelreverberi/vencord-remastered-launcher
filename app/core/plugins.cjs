@@ -19,6 +19,22 @@ async function inspect(dir) {
     return { name, entry, description: /description\s*:\s*(["'`])([\s\S]*?)\1/.exec(text)?.[2] || 'No description declared',
         author: /authors\s*:\s*\[([\s\S]*?)\]/.exec(text)?.[1].replace(/\s+/g, ' ').slice(0, 250) || 'Not declared' };
 }
+async function findPluginRoot(dir) {
+    // Inspect source only; never import/evaluate repository modules.
+    const files = await tree(dir);
+    try { await inspect(dir); return dir; } catch (e) {
+        if (e.message.includes('must not declare')) throw e;
+    }
+    const candidates = [];
+    for (const file of files.filter(f => /(?:^|\/)index\.tsx?$/.test(f.name) && f.name.split('/').length <= 5)) {
+        const folder = path.dirname(inside(dir, file.name));
+        try { await inspect(folder); candidates.push(folder); } catch (e) {
+            if (e.message.includes('must not declare')) throw e;
+        }
+    }
+    if (candidates.length !== 1) throw new Error(candidates.length ? 'Repository contains multiple plugins. Import an individual plugin folder.' : 'No supported Vencord plugin entrypoint found');
+    return candidates[0];
+}
 class Plugins {
     constructor(root, git) { this.root = root; this.git = git; this.file = path.join(root, 'plugin-metadata.json'); }
     async list() {
@@ -35,13 +51,19 @@ class Plugins {
         return value;
     }
     async snapshot(dir, source, previous) {
-        const info = await inspect(dir);
+        const input = await findPluginRoot(dir);
+        const info = await inspect(input);
+        const identifier = info.entry.startsWith('index.') ? path.basename(input) : info.entry.replace(/\.tsx?$/, '');
+        const suffix = identifier.split('.').at(-1);
+        const target = ['desktop', 'discordDesktop', 'web', 'browser', 'vesktop', 'dev'].includes(suffix) ? suffix : '';
+        if (target && !['desktop', 'discordDesktop'].includes(target)) throw new Error(`Plugin target ${target} is not compatible with this Discord desktop build`);
+        const subdirectory = path.relative(dir, input).split(path.sep).join('/');
         if (previous && info.name !== previous.name) throw new Error('Plugin changed identity. Import it separately to preserve settings.');
         const id = previous?.id || crypto.randomUUID();
         const temp = path.join(this.root, 'cache', `import-${crypto.randomUUID()}`);
         await fs.mkdir(temp, { recursive: true });
         try {
-            await copyTree(dir, temp);
+            await copyTree(input, temp);
             if (info.entry !== 'index.ts' && info.entry !== 'index.tsx') {
                 // Preserve helper imports and native.ts; normalize only the entrypoint.
                 await fs.rename(path.join(temp, info.entry), path.join(temp, info.entry.endsWith('.tsx') ? 'index.tsx' : 'index.ts'));
@@ -53,7 +75,7 @@ class Plugins {
             await fs.mkdir(path.dirname(dest), { recursive: true });
             if (await exists(dest)) await fs.rm(temp, { recursive: true });
             else await fs.rename(temp, dest);
-            return { ...previous, ...normalized, ...source, id, storage, content, included: previous?.included ?? true, installedAt: new Date().toISOString() };
+            return { ...previous, ...normalized, ...source, subdirectory, target, id, storage, content, included: previous?.included ?? true, installedAt: new Date().toISOString() };
         } finally { await fs.rm(temp, { recursive: true, force: true }); }
     }
     async addLocal(dir) {
@@ -119,9 +141,9 @@ class Plugins {
         for (const p of selected) {
             const src = inside(this.root, p.storage);
             if (digest(JSON.stringify(await tree(src))) !== p.content) throw new Error(`Stored plugin ${p.name} is damaged; reimport it`);
-            await copyTree(src, path.join(dest, p.id));
+            await copyTree(src, path.join(dest, p.id + (p.target ? `.${p.target}` : '')));
         }
         return selected;
     }
 }
-module.exports = { Plugins, inspect, entrypoint };
+module.exports = { Plugins, inspect, entrypoint, findPluginRoot };

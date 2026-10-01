@@ -129,3 +129,15 @@ test('Windows version detection chooses numeric newest resources directory', asy
     const targets = await detect('win32', root, { LOCALAPPDATA: root });
     assert.equal(targets.length, 1); assert.match(targets[0].resources, /app-10\.0\.0/);
 });
+test('single nested plugin is discovered and desktop targeting is preserved', async t => {
+    const root = await temp(t); const local = path.join(root, 'repo');
+    await fixture(path.join(local, 'src', 'nested.discordDesktop'), 'NestedPlugin');
+    const plugins = new Plugins(path.join(root, 'data'), null);
+    const p = await plugins.addLocal(local);
+    assert.equal(p.subdirectory, 'src/nested.discordDesktop');
+    assert.equal(p.target, 'discordDesktop');
+    const source = path.join(root, 'source'); await plugins.stage(source);
+    assert.equal(await exists(path.join(source, 'src/userplugins', `${p.id}.discordDesktop`, 'index.ts')), true);
+    await fixture(path.join(root, 'web.web'), 'WebOnly');
+    await assert.rejects(plugins.addLocal(path.join(root, 'web.web')), /not compatible/);
+});
