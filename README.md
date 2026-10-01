@@ -2,7 +2,7 @@
 
 An unofficial desktop manager for [Vencord Remastered](https://github.com/rafaelreverberi/vencord-remastered). It preserves third-party plugin source outside the Vencord checkout, builds plugins using Vencord's normal `src/userplugins` architecture, and patches Discord only after validating the build.
 
-[Download launcher releases](https://github.com/rafaelreverberi/vencord-remastered-launcher/releases). Initial macOS builds are unsigned; signing/notarization and live Windows/Linux verification are tracked in [VALIDATION.md](docs/VALIDATION.md).
+[Download launcher releases](https://github.com/rafaelreverberi/vencord-remastered-launcher/releases). Version 0.1.0 is an unsigned preview; signing/notarization and live Windows/Linux verification are tracked in [VALIDATION.md](docs/VALIDATION.md).
 
 1. Open the launcher and select a detected Discord installation.
 2. Quit Discord, then click **Patch / Install**. The launcher includes Node and Git and prepares the exact pnpm version requested by Vencord.
@@ -22,13 +22,17 @@ Electron's platform userData location, using application name **Vencord Remaster
 
 Canonical plugins use immutable snapshots. The source checkout and generated userplugins are replaceable. Failed builds never replace the installed ASAR or loader. Interrupted patch transactions restore the previous patch on next open. Old builds and quarantined source are retained for recovery; they can consume disk space. Do not remove the active build named in state.json.
 
+On macOS, grant **Privacy & Security → App Management → Vencord Remastered Launcher** when prompted. **Settings → Open Permission Settings** opens this pane.
+
 Read-only system installations require appropriate filesystem permissions. The launcher reports permission failures without silently elevating itself. Quit Discord before patching; the launcher never kills Discord. Flatpak uses a per-application filesystem grant, with no arbitrary shell commands.
 
 ## Plugin compatibility and trust
 
 Third-party plugins are not reviewed by Vencord Remastered. Only install plugins from sources you trust. They execute JavaScript/TypeScript, and native.ts can access Node and your computer. Disabling a plugin controls its normal runtime lifecycle; it does not sandbox its module initialization. Use exclusion or Safe Mode to omit untrusted/broken code entirely.
 
-Choose a repository/folder containing an individual Vencord plugin with index.ts/index.tsx or one top-level TypeScript entrypoint, using a literal `definePlugin({ name: "Name", … })`. Plugin names must be unique. Required third-party plugins, symlinks, special files, paths escaping staging and oversized imports are rejected. Git submodules and plugin package scripts are never run. Random npm dependencies are not installed; dependencies must be provided by the Vencord workspace. A missing import produces a visible build diagnostic, with recovery actions.
+Choose a repository/folder containing an individual Vencord plugin (one unambiguous nested plugin is also detected) with index.ts/index.tsx or one top-level TypeScript entrypoint, using a literal `definePlugin({ name: "Name", … })`. Plugin names must be unique. Required third-party plugins, symlinks, special files, paths escaping staging and oversized imports are rejected. Git submodules and plugin package scripts are never run. Random npm dependencies are not installed; dependencies must be provided by the Vencord workspace. A missing import produces a visible build diagnostic, with recovery actions.
+
+Launcher updates are separate from Remastered updates. For this unsigned preview, use **Settings → Open Latest Release** and replace the app manually; plugin storage and settings stay in the application data folders. Signed macOS automatic updates and an end-to-end update between two releases remain unverified.
 
 ## Development
 

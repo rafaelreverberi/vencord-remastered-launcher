@@ -28,7 +28,9 @@ REMASTERED_KEEP_TEST_DATA=1 to retain it for diagnosis.
 Live host checklist: preserve any prior patch; quit Discord; open a fresh packaged
 launcher; install; start Discord and inspect Remastered settings; import a trusted Git
 plugin; rebuild; start Discord and check/enable the plugin; verify native update handoff;
-remove/exclude test plugin and rebuild. Repeat on each OS/distribution. Windows/Linux
+remove/exclude test plugin and rebuild. On macOS, grant App Management permission
+and repeat patching with the app opened through Finder/LaunchServices, because a
+terminal-launched process may inherit different OS permissions. Repeat on each OS/distribution. Windows/Linux
 CI packaging does not by itself prove Discord rendering or system/Flatpak permissions.
 
 Publisher signing needs actual developer credentials. Configure electron-builder mac
