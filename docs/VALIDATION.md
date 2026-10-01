@@ -32,7 +32,7 @@ establish live Windows/Linux Discord rendering, Flatpak permissions or every Dis
 channel/layout. Existing normal settings are preserved; the test plugin's disabled
 settings record and immutable source snapshot remain available for recovery.
 
-Signing/notarization credentials are unavailable. Version 0.1.0 is an **unsigned
+Signing/notarization credentials are unavailable. Version 0.1.1 is an **unsigned
 preview**, including macOS and Windows. macOS automatic self-update requires signed
 distribution; use **Settings → Open Latest Release** for manual replacement, retaining
 application data. Explicit updater controls and release metadata exist, but an actual

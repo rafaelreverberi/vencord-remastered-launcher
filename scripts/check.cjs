@@ -6,4 +6,5 @@ function walk(dir) { for (const e of fs.readdirSync(dir, { withFileTypes: true }
 for (const dir of ['app', 'scripts', 'test']) walk(path.resolve(dir));
 const pkg = require('../package.json');
 if (!pkg.build.asarUnpack.includes('node_modules/dugite/git/**/*')) throw new Error('Embedded Git must be unpacked');
+if (!pkg.build.linux.maintainer) throw new Error('Debian packages require maintainer metadata');
 console.log('JavaScript syntax and package configuration passed');
