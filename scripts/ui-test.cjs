@@ -10,6 +10,7 @@ async function main() {
         const page = await app.firstWindow();
         const errors = [];
         page.on('pageerror', e => errors.push(e.message));
+        await page.waitForURL('remastered-app://launcher/');
         await page.waitForSelector('#target option', { timeout: 60000, state: 'attached' });
         assert.equal(await page.title(), 'Vencord Remastered Launcher');
         assert.equal(await page.evaluate(() => typeof require), 'undefined');

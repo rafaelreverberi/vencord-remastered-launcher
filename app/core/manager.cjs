@@ -42,7 +42,7 @@ class Manager {
         this.log('Verifying managed Remastered source\n');
         let usable = false;
         if (await exists(this.source)) {
-            try { usable = await this.git.run(this.source, ['rev-parse', '--show-toplevel']) === await fs.realpath(this.source) && await exists(path.join(this.source, 'package.json')); } catch { /* recreate corrupt managed clone */ }
+            try { usable = path.resolve(await this.git.run(this.source, ['rev-parse', '--show-toplevel'])) === await fs.realpath(this.source) && await exists(path.join(this.source, 'package.json')); } catch { /* recreate corrupt managed clone */ }
         }
         if (!usable) {
             if (await exists(this.source)) await fs.rename(this.source, `${this.source}.quarantine-${Date.now()}`);

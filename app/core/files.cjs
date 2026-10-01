@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-const fs = require('node:fs/promises');
+// Electron virtualizes ASARs; patching must use the raw filesystem.
+const fs = (() => { try { return require('original-fs').promises; } catch { return require('node:fs/promises'); } })();
 const path = require('node:path');
 const crypto = require('node:crypto');
 

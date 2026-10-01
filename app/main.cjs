@@ -7,6 +7,7 @@ const { json, writeJson } = require('./core/files.cjs');
 const { autoUpdater } = require('electron-updater');
 app.setName('Vencord Remastered');
 protocol.registerSchemesAsPrivileged([{ scheme: 'remastered-app', privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
+let quitAfterOperation = false;
 let win, manager, routeUpdate = process.argv.some(parseLink), updateState = { status: 'Not checked' };
 const UI_ORIGIN = 'remastered-app://launcher';
 const root = app.getPath('userData');
@@ -43,7 +44,7 @@ async function start() {
         webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
     win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
     win.webContents.on('will-navigate', (event, url) => { if (url !== `${UI_ORIGIN}/`) event.preventDefault(); });
-    win.on('close', event => { if (manager.busy) { event.preventDefault(); log('An operation is in progress. Close the launcher after it completes.\n'); } });
+    win.on('close', event => { if (manager.busy) { event.preventDefault(); quitAfterOperation = true; log('The launcher will close when the current operation completes.\n'); } });
     ipcMain.handle('remastered:action', async (event, action, payload = {}) => {
         if (event.sender !== win.webContents || event.senderFrame !== win.webContents.mainFrame || !event.senderFrame.url.startsWith(`${UI_ORIGIN}/`)) throw new Error('Untrusted IPC sender');
         if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw new Error('Invalid request');
@@ -104,7 +105,7 @@ async function start() {
             const state = await manager.state(); state.lastError = { message: e.message, date: new Date().toISOString() };
             await writeJson(manager.statePath, state);
             throw new Error(e.message);
-        }
+        } finally { if (quitAfterOperation && !manager.busy) app.quit(); }
     });
     autoUpdater.autoDownload = false; autoUpdater.autoInstallOnAppQuit = false;
     autoUpdater.on('error', e => { updateState = { status: 'Check failed', error: e.message }; log(`Launcher update: ${e.message}\n`); });
@@ -115,6 +116,6 @@ async function start() {
     await win.loadURL(`${UI_ORIGIN}/`);
     if (routeUpdate) openUpdate();
     // One check on open; no timers, tray, login item or background agent.
-    manager.exclusive(() => manager.checkUpdates()).then(() => win.webContents.send('remastered:route', 'refresh')).catch(e => log(`Update check unavailable: ${e.message}\n`));
+    manager.exclusive(() => manager.checkUpdates()).then(() => win.webContents.send('remastered:route', 'refresh')).catch(e => log(`Update check unavailable: ${e.message}\n`)).finally(() => { if (quitAfterOperation) app.quit(); });
     if (app.isPackaged) autoUpdater.checkForUpdates().catch(() => {});
 }

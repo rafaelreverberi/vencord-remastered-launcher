@@ -88,7 +88,7 @@ test('successful patch preserves original and repatch failure restores working A
     assert.deepEqual(await fs.readFile(app), good);
     assert.deepEqual(await fs.readFile(path.join(data, 'loader.cjs')), loader);
     await patcher.patch(target, '/second/build', '/settings');
-    assert.match(await fs.readFile(path.join(data, 'loader.cjs'), 'utf8'), /second\/build/);
+    assert.ok((await fs.readFile(path.join(data, 'loader.cjs'), 'utf8')).includes(JSON.stringify(path.join('/second/build', 'patcher.js'))));
     assert.equal(await fs.readFile(path.join(resources, '_app.asar'), 'utf8'), 'original-discord');
 });
 test('interrupted first patch recovers original archive and system unpacked directory', async t => {
@@ -115,7 +115,7 @@ test('embedded Git works without system Git and does not run configured hooks', 
     const root = await temp(t); const repo = path.join(root, 'repo'); await fs.mkdir(repo);
     const git = new Git(path.join(root, 'cache'));
     await git.run(repo, ['init']);
-    assert.equal(await git.run(repo, ['rev-parse', '--show-toplevel']), await fs.realpath(repo));
+    assert.equal(path.resolve(await git.run(repo, ['rev-parse', '--show-toplevel'])), await fs.realpath(repo));
     await git.run(repo, ['config', 'core.hooksPath', path.join(root, 'malicious-hooks')]);
     await fs.mkdir(path.join(root, 'malicious-hooks'));
     await fs.writeFile(path.join(root, 'malicious-hooks/pre-commit'), '#!/bin/sh\nexit 97\n', { mode: 0o755 });
