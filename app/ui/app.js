@@ -19,6 +19,7 @@ async function refresh() {
 }
 function render() {
     const { state, plugins, targets } = snapshot;
+    const operating = running || snapshot.busy;
     const options = $('target');
     const old = selected || options.value;
     options.replaceChildren();
@@ -55,13 +56,13 @@ function render() {
         if (p.url) actions.append(button('Update', () => run('pluginUpdate', { id: p.id })));
         row.append(actions); list.append(row);
     }
-    for (const id of ['apply', 'update', 'repair', 'safe', 'apply-plugins']) $(id).disabled = running || !target;
-    for (const b of document.querySelectorAll('button')) if (!['toggle-log', 'close-dialog'].includes(b.id) && !b.dataset.page && !['apply', 'update', 'repair', 'safe', 'apply-plugins'].includes(b.id)) b.disabled = running;
+    for (const id of ['apply', 'update', 'repair', 'safe', 'apply-plugins']) $(id).disabled = operating || !target;
+    for (const b of document.querySelectorAll('button')) if (!['toggle-log', 'close-dialog'].includes(b.id) && !b.dataset.page && !['apply', 'update', 'repair', 'safe', 'apply-plugins'].includes(b.id)) b.disabled = operating;
     $('launcher-download').disabled = running || snapshot.launcherUpdate?.status !== 'Update available';
     $('launcher-install').disabled = running || snapshot.launcherUpdate?.status !== 'Ready to install';
 }
 async function run(action, payload = {}) {
-    if (running) return;
+    if (running || snapshot?.busy) return;
     running = true; lastAction = action;
     $('error').hidden = true; $('progress').hidden = false;
     const labels = { apply: 'Preparing build and patch…', update: 'Updating Remastered…', repair: 'Repairing installation…', safe: 'Building Safe Mode…', addGit: 'Importing and building plugin…', addLocal: 'Importing local plugin…', pluginUpdateAll: 'Updating plugins…', check: 'Checking for updates…' };

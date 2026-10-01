@@ -113,9 +113,12 @@ async function start() {
     autoUpdater.on('update-not-available', () => { updateState = { status: 'Up to date' }; win.webContents.send('remastered:route', 'refresh'); });
     autoUpdater.on('download-progress', info => { log(`Launcher update download ${Math.round(info.percent)}%\n`); });
     autoUpdater.on('update-downloaded', () => { updateState.status = 'Ready to install'; log('Launcher update ready to install\n'); win.webContents.send('remastered:route', 'refresh'); });
+    const openingCheck = manager.exclusive(() => manager.checkUpdates());
+    // Attach rejection handling immediately, before renderer load.
+    const checked = openingCheck.catch(e => log(`Update check unavailable: ${e.message}\n`));
     await win.loadURL(`${UI_ORIGIN}/`);
     if (routeUpdate) openUpdate();
     // One check on open; no timers, tray, login item or background agent.
-    manager.exclusive(() => manager.checkUpdates()).then(() => win.webContents.send('remastered:route', 'refresh')).catch(e => log(`Update check unavailable: ${e.message}\n`)).finally(() => { if (quitAfterOperation) app.quit(); });
+    checked.then(() => { if (!win.isDestroyed()) win.webContents.send('remastered:route', 'refresh'); }).finally(() => { if (quitAfterOperation) app.quit(); });
     if (app.isPackaged) autoUpdater.checkForUpdates().catch(() => {});
 }
