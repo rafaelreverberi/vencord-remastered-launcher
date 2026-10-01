@@ -1,7 +1,7 @@
 {
   "name": "vencord-remastered-launcher",
   "productName": "Vencord Remastered Launcher",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Persistent plugin, build and patch manager for Vencord Remastered",
   "author": "rafaelreverberi",
   "license": "GPL-3.0-or-later",
@@ -100,7 +100,9 @@
       "owner": "rafaelreverberi",
       "repo": "vencord-remastered-launcher"
     },
-    "icon": "build/icon.png"
+    "icon": "build/icon.png",
+    "beforePack": "scripts/package-git.cjs",
+    "afterPack": "scripts/verify-package-git.cjs"
   },
   "desktopName": "vencord-remastered-launcher"
 }

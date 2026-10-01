@@ -37,3 +37,8 @@ Publisher signing needs actual developer credentials. Configure electron-builder
 identity/hardened runtime/notarization and Windows signing before claiming a signed
 release. Self-update metadata is produced by the release workflow; update-on-quit and
 automatic downloads are disabled, and explicit Download/Install controls preserve data.
+
+Packaging explicitly selects the embedded Git archive for the target architecture
+using dugite's pinned SHA256 verification. The macOS package hook checks the actual
+Mach-O CPU type in each finished arm64/x64 app before creating installers. Full
+installer formats, including Debian maintainer requirements, are built in CI.

@@ -2,7 +2,7 @@
 
 An unofficial desktop manager for [Vencord Remastered](https://github.com/rafaelreverberi/vencord-remastered). It preserves third-party plugin source outside the Vencord checkout, builds plugins using Vencord's normal `src/userplugins` architecture, and patches Discord only after validating the build.
 
-[Download launcher releases](https://github.com/rafaelreverberi/vencord-remastered-launcher/releases). Version 0.1.1 is an unsigned preview; signing/notarization and live Windows/Linux verification are tracked in [VALIDATION.md](docs/VALIDATION.md).
+[Download launcher releases](https://github.com/rafaelreverberi/vencord-remastered-launcher/releases). Version 0.1.2 is an unsigned preview; signing/notarization and live Windows/Linux verification are tracked in [VALIDATION.md](docs/VALIDATION.md).
 
 1. Open the launcher and select a detected Discord installation.
 2. Quit Discord, then click **Patch / Install**. The launcher includes Node and Git and prepares the exact pnpm version requested by Vencord.
