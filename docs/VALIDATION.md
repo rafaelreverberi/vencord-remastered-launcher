@@ -6,7 +6,7 @@
   generator and web build passed locally. Fork CI and manual upstream sync passed.
 - Launcher: 13 filesystem/security/Git/ASAR/recovery tests passed locally and on
   macOS, Windows and Ubuntu CI. All three systems successfully packaged the app.
-  Cross-platform CI run: `36859298932`.
+  Final full-installer CI run: `36861308764`; release source tag: `v0.1.3`.
 - Fresh GitHub clone integration passed ten scenarios with three persistent plugins,
   exact pnpm 11.9.0, cache reuse, source recreation, Safe Mode and a real compilation
   failure preserving the installed loader. Runs used system Node 22.22.3 and the
