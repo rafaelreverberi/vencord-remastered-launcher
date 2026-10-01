@@ -50,6 +50,8 @@ async function start() {
         if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw new Error('Invalid request');
         try {
             if (action === 'snapshot') return { ...await manager.snapshot(), launcher: app.getVersion(), launcherUpdate: updateState };
+            if (action === 'appManagement') { if (process.platform !== 'darwin') throw new Error('App Management settings are macOS only'); return shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_AppBundles'); }
+            if (action === 'launcherRelease') return shell.openExternal('https://github.com/rafaelreverberi/vencord-remastered-launcher/releases/latest');
             if (action === 'openData') return shell.openPath(root);
             if (action === 'openSource') {
                 const p = (await manager.plugins.list()).find(p => p.id === payload.id);
@@ -101,6 +103,7 @@ async function start() {
                 return manager.snapshot();
             });
         } catch (e) {
+            if (process.platform === 'darwin' && /EPERM|operation not permitted/.test(e.message)) e = new Error('macOS blocked access to the Discord application bundle. Allow Vencord Remastered Launcher in System Settings → Privacy & Security → App Management, then retry. Your installed build is unchanged.');
             log(`${e.message}\n`);
             const state = await manager.state(); state.lastError = { message: e.message, date: new Date().toISOString() };
             await writeJson(manager.statePath, state);

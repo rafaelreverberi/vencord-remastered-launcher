@@ -71,7 +71,10 @@
           ]
         }
       ],
-      "identity": null
+      "identity": null,
+      "extendInfo": {
+        "NSAppBundlesUsageDescription": "Vencord Remastered Launcher needs to modify Discord\u2019s application bundle to install and repair your locally built Vencord Remastered patch."
+      }
     },
     "win": {
       "target": [

@@ -78,13 +78,14 @@ async function run(action, payload = {}) {
         const retryAction = ['addGit', 'addLocal', 'pluginUpdate', 'pluginUpdateAll'].includes(action) ? 'apply' : action;
         const retry = button('Retry Build', () => run(retryAction, payload)); $('error').append(document.createElement('br'), retry);
         if (['apply', 'update', 'repair', 'addGit', 'addLocal', 'pluginUpdate', 'pluginUpdateAll'].includes(action)) {
+            if (/App Management/.test(e.message)) $('error').append(button('Open App Management Settings', () => run('appManagement')));
             $('error').append(button('Manage Plugins', () => navigate('plugins')), button('Build in Safe Mode', () => run('safe')));
         }
     } finally { running = false; $('progress').hidden = true; await refresh().catch(() => {}); }
 }
 for (const b of document.querySelectorAll('nav button')) b.addEventListener('click', () => navigate(b.dataset.page));
 $('target').addEventListener('change', () => { selected = $('target').value; render(); });
-for (const [id, action] of Object.entries({ apply: 'apply', update: 'update', repair: 'repair', safe: 'safe', check: 'check', 'apply-plugins': 'apply', 'update-all': 'pluginUpdateAll', 'open-data': 'openData', recreate: 'recreate', 'settings-folder': 'settingsFolder', 'launcher-check': 'launcherCheck', 'launcher-download': 'launcherDownload', 'launcher-install': 'launcherInstall' })) $(id).addEventListener('click', () => run(action));
+for (const [id, action] of Object.entries({ apply: 'apply', update: 'update', repair: 'repair', safe: 'safe', check: 'check', 'apply-plugins': 'apply', 'update-all': 'pluginUpdateAll', 'open-data': 'openData', recreate: 'recreate', 'settings-folder': 'settingsFolder', 'app-management': 'appManagement', 'launcher-release': 'launcherRelease', 'launcher-check': 'launcherCheck', 'launcher-download': 'launcherDownload', 'launcher-install': 'launcherInstall' })) $(id).addEventListener('click', () => run(action));
 for (const id of ['add', 'empty-add']) $(id).addEventListener('click', () => $('add-dialog').showModal());
 $('close-dialog').addEventListener('click', () => $('add-dialog').close());
 $('add-local').addEventListener('click', () => { $('add-dialog').close(); run('addLocal'); });
