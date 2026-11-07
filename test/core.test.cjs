@@ -27,7 +27,7 @@ async function repo(t, root) {
         await fs.writeFile(path.join(source, 'a.txt'), content);
         await git.run(source, ['add', 'a.txt']);
         const tree = await git.run(source, ['write-tree']);
-        const commit = await git.run(source, ['commit-tree', tree, '-p', base, '-m', 'diverge']);
+        const commit = await git.run(source, ['-c', 'user.name=T', '-c', 'user.email=t@example.com', 'commit-tree', tree, '-p', base, '-m', 'diverge']);
         await git.run(source, ['reset', '--hard']); // commit-tree never moves HEAD; keep the worktree pristine
         return commit;
     };
