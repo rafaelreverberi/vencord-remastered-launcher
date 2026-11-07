@@ -14,10 +14,16 @@ async function download(url) {
     if (data.length > 40 * 1024 * 1024) throw new Error('Toolchain download exceeds size limit');
     return data;
 }
+function freshXDGPaths(environment, root) {
+    for (const variable of ['XDG_DATA_HOME', 'XDG_CACHE_HOME']) if (!environment[variable]) environment[variable] = path.join(root, 'cache', variable.replaceAll('_', '-').toLowerCase());
+}
 class Toolchain {
     constructor(root, log = () => {}, executable = process.execPath) { this.root = root; this.log = log; this.executable = executable; }
     run(args, cwd, more = {}) {
         const environment = setupEnvironment({ ...process.env, ELECTRON_RUN_AS_NODE: '1', NODE_OPTIONS: '', ...more }).env;
+        // pnpm 12 fetches its native binary on first use; keep that inside the launcher data
+        // instead of writing to XDG system locations.
+        freshXDGPaths(environment, this.root);
         return new Promise((resolve, reject) => {
             const child = spawn(this.executable, args, { cwd, env: environment, shell: false, windowsHide: true });
             let output = '';
@@ -56,10 +62,11 @@ class Toolchain {
                 await fs.rename(temporary, dir);
             } finally { await fs.rm(temporary, { recursive: true, force: true }); }
         }
-        const bin = await this.binPath(dir, version);
-        const detected = await this.run([bin, '--version'], source);
+        const entry = await this.binPath(dir, version);
+        // pnpm 12 prints a native-binary download notice on first run; take the last line only.
+        const detected = (await this.run([entry, '--version'], source)).trim().split('\n').pop().trim();
         if (detected !== version) throw new Error('Cached pnpm version is invalid; remove damaged cache and repair');
-        return { bin, version, node, package: pkg };
+        return { bin: entry, version, node, package: pkg };
     }
     async binPath(dir, version) {
         for (const name of ['pnpm.cjs', 'pnpm.mjs']) {
