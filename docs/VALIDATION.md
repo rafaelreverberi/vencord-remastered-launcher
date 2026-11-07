@@ -1,5 +1,25 @@
 # Validation status — 1 October 2026
 
+Rescued release validation — 7 November 2026 (version 0.1.4):
+
+- Upstream sync root cause fixed in the Vencord Remastered fork ([PR #1](https://github.com/rafaelreverberi/vencord-remastered/pull/1)):
+  the Remastered settings page imported a removed `Button` export, so the daily
+  automation never published a validated merge and `main` stayed at Vencord 1.15.13.
+  Fork `main` now contains upstream 1.15.16 with the rspack webpack fixes and the
+  repaired settings import; the rewritten sync workflow validates the desktop and web
+  builds against a moving `origin/main` with retries and publishes diagnostics on
+  failure. All fork workflows (`test`, managed build, sync, mirror) are green.
+- Launcher 0.1.4 additions: local upstream rescue merge when the fork lags, best-effort
+  remote fetches that keep the last verified revisions, pnpm 11/12 entrypoint resolution
+  (`bin/pnpm.cjs` vs `bin/pnpm.mjs`) and a pnpm-version re-verification tolerant of the
+  pnpm 12 first-run native binary download, which stays inside the launcher data folder.
+  15 filesystem/security/Git/ASAR/recovery tests passed locally and on macOS, Windows
+  and Ubuntu CI.
+- The integration suite passed end to end against real Vencord history, including the
+  upstream rescue merge to `383409e6`, a full desktop build with the rspack fixes, and
+  pnpm 12.15.0 dependency installation. A live macOS user confirmed the black-screen
+  repair on stable Discord 0.0.378 after updating the installed build.
+
 - Complete upstream Vencord Git history preserved in the real GitHub fork. Upstream
   audit baseline: `7f0c10cc29fd789f2f4828ae3dc947623e837920`.
 - Upstream desktop standalone build, TypeScript, ESLint, stylelint, plugin metadata
