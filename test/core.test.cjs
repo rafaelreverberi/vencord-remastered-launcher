@@ -6,12 +6,32 @@ const { fs, path, exists, json, writeJson, inside, tree } = require('../app/core
 const { Plugins } = require('../app/core/plugins.cjs');
 const { Git, gitUrl } = require('../app/core/git.cjs');
 const { Patcher, asar, detect } = require('../app/core/discord.cjs');
-const { Manager, parseLink } = require('../app/core/manager.cjs');
+const { Manager, parseLink, rescueUpstream } = require('../app/core/manager.cjs');
 async function temp(t) { const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'vr-test-')); t.after(() => fs.rm(dir, { recursive: true, force: true })); return dir; }
 async function fixture(base, name = 'TestPlugin', extra = '') {
     await fs.mkdir(base, { recursive: true });
     await fs.writeFile(path.join(base, 'index.ts'), `import definePlugin from '@utils/types'; export default definePlugin({ name: "${name}", description: "A test plugin", authors: [], ${extra} });`);
     return base;
+}
+// Creates a repo with an initial "base" commit containing a.txt, and returns helpers to
+// create divergent commits that stand for the managed source side and the upstream side.
+async function repo(t, root) {
+    const git = new Git(path.join(root, 'cache'));
+    const source = path.join(root, 'source');
+    await git.run(root, ['init', '--initial-branch', 'main', source]);
+    await fs.writeFile(path.join(source, 'a.txt'), 'base\n');
+    await git.run(source, ['add', 'a.txt']);
+    await git.run(source, ['-c', 'user.name=T', '-c', 'user.email=t@example.com', 'commit', '-m', 'base']);
+    const base = await git.run(source, ['rev-parse', 'HEAD']);
+    const branch = async content => {
+        await fs.writeFile(path.join(source, 'a.txt'), content);
+        await git.run(source, ['add', 'a.txt']);
+        const tree = await git.run(source, ['write-tree']);
+        const commit = await git.run(source, ['commit-tree', tree, '-p', base, '-m', 'diverge']);
+        await git.run(source, ['reset', '--hard']); // commit-tree never moves HEAD; keep the worktree pristine
+        return commit;
+    };
+    return { git, source, base, branch };
 }
 test('URL and protocol validation blocks executable transports and command-like parameters', () => {
     for (const url of ['file:///tmp/plugin', 'ssh://github.com/x/y', 'https://user:pass@github.com/x/y', 'https://github.com/x/y?exec=sh', 'ext::sh']) assert.throws(() => gitUrl(url));
@@ -140,4 +160,27 @@ test('single nested plugin is discovered and desktop targeting is preserved', as
     assert.equal(await exists(path.join(source, 'src/userplugins', `${p.id}.discordDesktop`, 'index.ts')), true);
     await fixture(path.join(root, 'web.web'), 'WebOnly');
     await assert.rejects(plugins.addLocal(path.join(root, 'web.web')), /not compatible/);
+});
+test('upstream rescue fast-forwards a stale managed source and then stays a no-op', async t => {
+    const root = await temp(t); const { git, source, branch } = await repo(t, root);
+    const upstream = await branch('upstream tree\n');
+    const log = [];
+    assert.equal(await rescueUpstream(git, source, upstream, s => log.push(s)), true);
+    assert.match(log.join(' '), /merging upstream/i);
+    assert.equal(await git.run(source, ['rev-parse', 'HEAD']), upstream);
+    const head = await git.run(source, ['rev-parse', 'HEAD']);
+    assert.equal(await rescueUpstream(git, source, upstream, () => {}), false);
+    assert.equal(await git.run(source, ['rev-parse', 'HEAD']), head);
+});
+test('upstream rescue refuses conflicting merges without damaging the checkout', async t => {
+    const root = await temp(t); const { git, source, branch } = await repo(t, root);
+    // Both sides change a.txt since base: a genuine conflict, as when upstream reworks remastered files.
+    const managed = await branch('managed wins\n');
+    const upstream = await branch('upstream wins\n');
+    await git.run(source, ['-c', 'user.name=T', '-c', 'user.email=t@example.com', 'reset', '--hard', managed]);
+    const head = await git.run(source, ['rev-parse', 'HEAD']);
+    assert.notEqual(head, upstream);
+    await assert.rejects(rescueUpstream(git, source, upstream, () => {}), /does not apply cleanly/);
+    assert.equal(await git.run(source, ['rev-parse', 'HEAD']), head);
+    assert.equal((await git.run(source, ['status', '--porcelain'])).trim(), '');
 });

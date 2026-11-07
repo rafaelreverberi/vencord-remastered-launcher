@@ -13,6 +13,38 @@ const REQUIRED = ['patcher.js', 'preload.js', 'renderer.js', 'renderer.css'];
 function settingsLocation(appData) {
     return process.env.VENCORD_USER_DATA_DIR || (process.env.DISCORD_USER_DATA_DIR ? path.join(process.env.DISCORD_USER_DATA_DIR, '..', 'VencordData') : path.join(appData, 'Vencord'));
 }
+async function refCommit(git, dir, ref) {
+    try { return await git.run(dir, ['rev-parse', '--verify', '--quiet', `${ref}^{commit}`]); } catch { return null; }
+}
+// merge-base --is-ancestor exits non-zero both for "not an ancestor" and errors; treating both as false is safe here
+async function isAncestor(git, dir, maybeAncestor, descendant) {
+    const ancestor = await refCommit(git, dir, maybeAncestor);
+    if (!ancestor) return false;
+    try { await git.run(dir, ['merge-base', '--is-ancestor', ancestor, await refCommit(git, dir, descendant)]); return true; } catch { return false; }
+}
+// Escapes a stale fork: if upstream moved ahead of the managed checkout while the fork's main
+// did not, merge upstream locally so Update still delivers current Vencord code.
+async function rescueUpstream(git, dir, upstreamRef = 'upstream/main', log = () => {}) {
+    const upstream = await refCommit(git, dir, upstreamRef);
+    if (!upstream) return false;
+    if (await isAncestor(git, dir, upstreamRef, 'HEAD')) return false;
+    log('Managed Remastered source is stale behind upstream; merging upstream locally\n');
+    const identity = ['-c', 'user.name=Vencord Remastered Launcher', '-c', 'user.email=launcher@localhost'];
+    try {
+        await git.run(dir, [...identity, 'merge', '--no-edit', upstream]);
+    } catch (e) {
+        await git.run(dir, ['merge', '--abort']).catch(() => {});
+        throw new Error(`Updating the managed source failed: the upstream merge does not apply cleanly (${e.message}). Recreate the source from Settings to repair it.`);
+    }
+    const merged = await refCommit(git, dir, 'HEAD');
+    if (merged === upstream) { // fast-forwarded; upstream is now an ancestor
+        log(`Merged upstream revision ${upstream.slice(0, 8)}\n`);
+        return true;
+    }
+    if (!await isAncestor(git, dir, upstreamRef, 'HEAD')) throw new Error('Upstream merge produced a commit that does not contain upstream; recreate the source from Settings');
+    log(`Merged upstream revision ${upstream.slice(0, 8)}\n`);
+    return true;
+}
 function parseLink(value) {
     try { const u = new URL(value); return u.protocol === 'vencord-remastered:' && u.hostname === 'update' && !u.username && !u.password && !u.port && !u.search && !u.hash && (u.pathname === '' || u.pathname === '/'); } catch { return false; }
 }
@@ -55,10 +87,20 @@ class Manager {
         if (await this.git.run(this.source, ['remote', 'get-url', 'upstream']) !== UPSTREAM) throw new Error('Unexpected upstream remote');
         const dirty = await this.git.run(this.source, ['status', '--porcelain', '--untracked-files=no']);
         if (dirty) throw new Error('Managed source contains local changes. They have been preserved; recreate the source from Settings.');
-        if (update || !await exists(path.join(this.source, '.git', 'refs', 'remotes', 'upstream', 'main'))) {
-            await this.git.run(this.source, ['fetch', 'origin', 'main']);
-            await this.git.run(this.source, ['fetch', 'upstream', 'main']);
-            if (update) await this.git.run(this.source, ['merge', '--ff-only', 'origin/main']);
+        if (update || !await refCommit(this.git, this.source, 'upstream/main')) {
+            // Both fetches are best-effort once known refs exist: offline or flaky networks
+            // must not prevent applying the last verified revisions, which is safe because
+            // builds never replace the installed ASAR and cache keys pin the revisions.
+            if (await refCommit(this.git, this.source, 'origin/main') === null) await this.git.run(this.source, ['fetch', 'origin', 'main']);
+            else await this.git.run(this.source, ['fetch', 'origin', 'main']).catch(e => this.log(`Could not reach the Remastered remote (${e.message.slice(0, 160)}); using the last known revision\n`));
+            if (await refCommit(this.git, this.source, 'upstream/main') === null) await this.git.run(this.source, ['fetch', 'upstream', 'main']);
+            else await this.git.run(this.source, ['fetch', 'upstream', 'main']).catch(e => this.log(`Could not reach the Upstream remote (${e.message.slice(0, 160)}); using the last known revision\n`));
+            if (update) {
+                await this.git.run(this.source, ['merge', '--ff-only', 'origin/main']);
+                // Recover when the fork's daily sync is broken and main lags behind upstream;
+                // the launcher then merges upstream itself instead of silently building old code.
+                await rescueUpstream(this.git, this.source, 'upstream/main', this.log);
+            }
         }
         // Refuse an accidental upstream-only clone without the launcher integration.
         if (!await exists(path.join(this.source, 'src', 'remastered', 'native.ts'))) throw new Error('Source lacks Remastered integration; wait for fork publication or update the source');
@@ -209,4 +251,4 @@ class Manager {
         await writeJson(this.statePath, state);
     }
 }
-module.exports = { Manager, ORIGIN, UPSTREAM, settingsLocation, parseLink };
+module.exports = { Manager, ORIGIN, UPSTREAM, settingsLocation, parseLink, rescueUpstream, refCommit, isAncestor };
