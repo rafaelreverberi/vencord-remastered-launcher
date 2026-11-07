@@ -36,8 +36,9 @@ class Toolchain {
         const version = /^pnpm@([\d]+\.[\d]+\.[\d]+)(?:\+sha\d+\..+)?$/.exec(pkg.packageManager)?.[1];
         if (!version) throw new Error('Source does not specify an exact supported pnpm version');
         const dir = path.join(this.root, 'cache', 'pnpm', version);
-        const bin = path.join(dir, 'package', 'bin', 'pnpm.cjs');
-        if (!await exists(bin)) {
+        // pnpm 11 ships bin/pnpm.cjs, pnpm 12 renamed it to pnpm.mjs; never hardcode either.
+        const candidates = ['pnpm.cjs', 'pnpm.mjs'].map(name => path.join(dir, 'package', 'bin', name));
+        if (!(await Promise.all(candidates.map(c => exists(c)))).some(Boolean)) {
             this.log(`Preparing pnpm ${version}\n`);
             const meta = JSON.parse((await download(`https://registry.npmjs.org/pnpm/${version}`)).toString());
             const archive = await download(meta.dist.tarball);
@@ -55,9 +56,17 @@ class Toolchain {
                 await fs.rename(temporary, dir);
             } finally { await fs.rm(temporary, { recursive: true, force: true }); }
         }
+        const bin = await this.binPath(dir, version);
         const detected = await this.run([bin, '--version'], source);
         if (detected !== version) throw new Error('Cached pnpm version is invalid; remove damaged cache and repair');
         return { bin, version, node, package: pkg };
+    }
+    async binPath(dir, version) {
+        for (const name of ['pnpm.cjs', 'pnpm.mjs']) {
+            const candidate = path.join(dir, 'package', 'bin', name);
+            if (await exists(candidate)) return candidate;
+        }
+        throw new Error(`Cached pnpm ${version} has no usable entrypoint; remove damaged cache and repair`);
     }
     async install(source, tool, force) {
         const key = digest(await fs.readFile(path.join(source, 'pnpm-lock.yaml'))) + digest(await fs.readFile(path.join(source, 'pnpm-workspace.yaml')));
